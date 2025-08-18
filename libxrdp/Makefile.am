@@ -55,7 +55,9 @@ libxrdp_la_SOURCES = \
   xrdp_orders_rail.c \
   xrdp_orders_rail.h \
   xrdp_rdp.c \
-  xrdp_sec.c
+  xrdp_sec.c \
+  broker.c \
+  broker.h
 
 libxrdp_la_LIBADD = \
   $(top_builddir)/common/libcommon.la \

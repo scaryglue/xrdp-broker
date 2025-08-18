@@ -27,6 +27,7 @@
 #include "xrdp_orders_rail.h"
 #include "ms-rdpedisp.h"
 #include "ms-rdpbcgr.h"
+#include "broker.h"
 
 #define MAX_BITMAP_BUF_SIZE (16 * 1024) /* 16K */
 #define TS_MONITOR_ATTRIBUTES_SIZE 20 /* [MS-RDPBCGR] 2.2.1.3.9 */
@@ -264,6 +265,8 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
         {
             case -1:
                 xrdp_caps_send_demand_active(rdp);
+                broker_redirect(session->rdp);
+                trans_force_write(rdp->sec_layer->mcs_layer->iso_layer->trans);
                 session->up_and_running = 0;
                 break;
             case 0:
