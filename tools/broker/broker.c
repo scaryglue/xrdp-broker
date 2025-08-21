@@ -26,6 +26,41 @@ typedef struct {
 static server_status servers[MAX_SERVERS];
 static int server_count = 0;
 
+typedef struct {
+    char user[64];
+    time_t redirected_at;
+} redirected_user;
+
+#define MAX_REDIRECTED 128
+static redirected_user redirected[MAX_REDIRECTED];
+static int redirected_count = 0;
+
+int is_redirected(const char *user)
+{
+    for(int i=0; i < redirected_count; i++)
+    {
+        if(strcmp(redirected[i].user, user) == 0)
+        {
+                // Remove this entry
+                redirected[i] = redirected[redirected_count - 1];
+                redirected_count--;
+                return 1;
+        }
+    }
+    return 0;
+}
+
+// Setzt einen Redirect-Lock
+void set_redirected(const char *user)
+{
+    if(redirected_count < MAX_REDIRECTED)
+    {
+        strncpy(redirected[redirected_count].user, user, sizeof(redirected[redirected_count].user));
+        redirected[redirected_count].redirected_at = time(NULL);
+        redirected_count++;
+    }
+}
+
 void free_users(server_status *s)
 {
     if(s->users)
@@ -226,15 +261,23 @@ int main()
         {
             printf("Got request from xrdp: %s\n", req);
             const char *user = req;
-            const char *s = choose_server(user);
             char reply[128];
+            if(is_redirected(user))
+            {
+                snprintf(reply, sizeof(reply), "{\"host\":\"0\"}");
+            }
+            else
+            {
+            const char *s = choose_server(user);
             if(s)
             {
+                set_redirected(user);
                 snprintf(reply, sizeof(reply), "{\"host\":\"%s\"}", s);
             }
             else
             {
                 snprintf(reply, sizeof(reply), "{\"error\":\"no host available\"}");
+            }
             }
             printf("Replying to xrdp: %s\n", reply);
             nng_send(rep, reply, strlen(reply) + 1, 0);
