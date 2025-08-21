@@ -255,6 +255,14 @@ int communicate_with_broker(const char* username, char *target)
         return 1;
     }
 
+    //special case if user was already redirected
+    if(g_strcasecmp(host, "0") == 0)
+    {
+        nng_free(reply, size);
+        nng_close(req);
+        return 2;
+    }
+
     snprintf(target, g_strlen(host) + 1, "%s", host);
 
     nng_free(reply, size);
@@ -268,11 +276,12 @@ int broker_redirect(struct xrdp_rdp *self)
     //struct xrdp_mcs *mcs = self->sec_layer->mcs_layer;
     g_writeln("%s", self->client_info.username);
     char* target = g_malloc(128, 0);
-    if (communicate_with_broker(self->client_info.username, target) != 0)
+
+    if (communicate_with_broker(self->client_info.username, target) == 2)
     {
         g_free(target);
-        LOG(LOG_LEVEL_ERROR, "Failed to communicate with broker");
-        return 1;
+        LOG(LOG_LEVEL_INFO, "User was already redirected");
+        return 0;
     }
     struct stream *s;
     make_stream(s);
