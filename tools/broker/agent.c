@@ -167,7 +167,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    rv = nng_dial(sock, dial_addr, NULL, 0);
+    rv = nng_listen(sock, "tcp://[::]:6001", NULL, 0);
     if(rv != 0)
     {
         fprintf(stderr, "pub listen, %s", nng_strerror(rv));
@@ -202,11 +202,8 @@ int main(int argc, char **argv)
         if (rv != 0) {
             fprintf(stderr, "nng_send: %s\n", nng_strerror(rv));
         } else {
-            printf("[agent:%s] HB cpu=%.1f mem=%.1f sessions=%d users=[", hostname, cpu, mem, sessions);
-            for (size_t i=0;i<users.len;i++) printf("%s%s", (i?",":""), users.items[i]);
-            printf("]\n");
+            printf("[agent:%s] %s\n", hostname, json);
         }
-
         sv_free(&users);
         sleep(3);
     }
