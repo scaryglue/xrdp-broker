@@ -5,6 +5,7 @@
 #include <nng/nng.h>
 #include <nng/protocol/pubsub0/sub.h>
 #include <nng/protocol/reqrep0/rep.h>
+#include <nng/supplemental/util/platform.h>
 #include <jansson.h>
 #include <unistd.h>
 
@@ -112,7 +113,7 @@ const char *choose_server(const char *user)
     // existing session
     for(int i=0; i < server_count; i++)
     {
-        if(difftime(now, servers[i].last_seen < TIMEOUT))
+        if(difftime(now, servers[i].last_seen) < TIMEOUT)
         {
             if(user_on_server(&servers[i], user))
             {
@@ -153,15 +154,29 @@ int main()
         fprintf(stderr, "sub open, %s\n", nng_strerror(rv));
         return 1;
     }
+    nng_socket_set(sub, NNG_OPT_SUB_SUBSCRIBE, "", 0);
 
-    rv = nng_dial(sub, "tcp://0.0.0.0:6001", NULL, 0);
-    if(rv != 0)
+    int attempts = 0;
+    while(attempts < 10)
     {
-        fprintf(stderr, "sub dial, %s\n", nng_strerror(rv));
+        rv = nng_dial(sub, "tcp://itovm88.cit.tum.de:6001", NULL, 0);
+        if(rv != 0)
+        {
+            fprintf(stderr, "sub dial, %s\n", nng_strerror(rv));
+            nng_msleep(200);
+            attempts++;
+        }
+        else
+        {
+            printf("successfully connected\n");
+            break;
+        }
+    }
+    if(rv != 0) {
+        fprintf(stderr, "Could not connect after multiple attempts\n");
         return 1;
     }
-
-    nng_socket_set(sub, NNG_OPT_SUB_SUBSCRIBE, "", 0);
+    
 
     //req rep for xrdp
     rv = nng_rep0_open(&rep);
@@ -178,19 +193,24 @@ int main()
         return 1;
     }
 
-    printf("broker listening");
+    printf("broker listening\n");
 
     while(1)
     {
         char *buf = NULL;
         size_t size;
-
         //agents on sub
-        rv = nng_recv(sub, &buf, &size, NNG_FLAG_NONBLOCK);
+        rv = nng_recv(sub, &buf, &size, NNG_FLAG_ALLOC | NNG_FLAG_NONBLOCK);
         if(rv == 0)
         {
+            printf("Got update from agent:\n");
+            printf("%s\n", buf);
             update_server(buf);
             nng_free(buf, size);
+        }
+        else
+        {
+            fprintf(stderr, "Error receiving agent update, %s\n", nng_strerror(rv));
         }
 
         //req from xrdp

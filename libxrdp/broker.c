@@ -7,7 +7,9 @@
 
 #include <openssl/rand.h>
 #include "libxrdp.h"
-#include <curl/curl.h>
+#include <nng/nng.h>
+#include <nng/protocol/reqrep0/req.h>
+#include <jansson.h>
 
 void out_string_null_terminated(struct stream *s, const char *str)
 {
@@ -197,11 +199,81 @@ xrdp_rdp_send_redir(struct xrdp_rdp *self, struct stream *s, int pdu_type)
     return 0;
 }
 
+int communicate_with_broker(const char* username, char *target)
+{
+    nng_socket req;
+    int rv;
+
+    if((rv = nng_req0_open(&req)) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "req open, %s\n", nng_strerror(rv));
+        return 1;
+    }
+
+    if ((rv = nng_dial(req, "tcp://itovm81.cit.tum.de:6002", NULL, 0)) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "nng_dial, %s\n", nng_strerror(rv));
+        return 1;
+    }
+
+    char request[128];
+    snprintf(request, sizeof(request), "%s", username);
+
+    if((rv = nng_send(req, request, g_strlen(request) + 1, 0)) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "nng_send, %s\n", nng_strerror(rv));
+        return 1;
+    }
+
+    char *reply = NULL;
+    size_t size;
+    if((rv = nng_recv(req, &reply, &size, NNG_FLAG_ALLOC)) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "nng_recv, %s\n", nng_strerror(rv));
+        return 1;
+    }
+
+    LOG(LOG_LEVEL_INFO, "Received reply: %s", reply);
+
+    json_error_t err;
+    json_t *root = json_loads(reply, 0, &err);
+    if (!root)
+    {
+        LOG(LOG_LEVEL_ERROR, "json_loads failed: %s at line %d", err.text, err.line);
+        nng_free(reply, size);
+        nng_close(req);
+        return 1;
+    }
+    const char *host = json_string_value(json_object_get(root, "host"));
+    
+    if (!host)
+    {
+        LOG(LOG_LEVEL_ERROR, "No host found in reply");
+        json_decref(root);
+        nng_free(reply, size);
+        nng_close(req);
+        return 1;
+    }
+
+    snprintf(target, g_strlen(host) + 1, "%s", host);
+
+    nng_free(reply, size);
+    nng_close(req);
+
+    return 0;
+}
 
 int broker_redirect(struct xrdp_rdp *self)
 {
     //struct xrdp_mcs *mcs = self->sec_layer->mcs_layer;
     g_writeln("%s", self->client_info.username);
+    char* target = g_malloc(128, 0);
+    if (communicate_with_broker(self->client_info.username, target) != 0)
+    {
+        g_free(target);
+        LOG(LOG_LEVEL_ERROR, "Failed to communicate with broker");
+        return 1;
+    }
     struct stream *s;
     make_stream(s);
     init_stream(s, 8192);
@@ -215,7 +287,9 @@ int broker_redirect(struct xrdp_rdp *self)
 
 
 
-    write_redirect_packet(s,"", self->client_info.username, "");
+    write_redirect_packet(s,target, self->client_info.username, "");
+
+    g_free(target);
 
     s_mark_end(s);
 
