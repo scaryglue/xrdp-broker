@@ -176,6 +176,16 @@ int main()
         fprintf(stderr, "Could not connect after multiple attempts\n");
         return 1;
     }
+    rv = nng_dial(sub, "tcp://itovm89.cit.tum.de:6001", NULL, 0);
+        if(rv != 0)
+        {
+            fprintf(stderr, "sub dial, %s\n", nng_strerror(rv));
+            return 1;
+        }
+        else
+        {
+            printf("successfully connected\n");
+        }
     
 
     //req rep for xrdp
