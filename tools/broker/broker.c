@@ -196,7 +196,7 @@ int main()
         return 1;
     }
 
-    rv = nng_listen(rep, "tcp://0.0.0.0:6002", NULL, 0);
+    rv = nng_listen(rep, "tcp://[::]:6002", NULL, 0);
     if(rv != 0)
     {
         fprintf(stderr, "rep listen, %s\n", nng_strerror(rv));
@@ -218,16 +218,13 @@ int main()
             update_server(buf);
             nng_free(buf, size);
         }
-        else
-        {
-            fprintf(stderr, "Error receiving agent update, %s\n", nng_strerror(rv));
-        }
 
         //req from xrdp
         char *req = NULL;
-        rv = nng_recv(rep ,&req, &size, NNG_FLAG_NONBLOCK);
+        rv = nng_recv(rep ,&req, &size, NNG_FLAG_NONBLOCK | NNG_FLAG_ALLOC);
         if(rv == 0)
         {
+            printf("Got request from xrdp: %s\n", req);
             const char *user = req;
             const char *s = choose_server(user);
             char reply[128];
@@ -239,6 +236,7 @@ int main()
             {
                 snprintf(reply, sizeof(reply), "{\"error\":\"no host available\"}");
             }
+            printf("Replying to xrdp: %s\n", reply);
             nng_send(rep, reply, strlen(reply) + 1, 0);
             nng_free(req, size);
         }
