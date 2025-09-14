@@ -207,11 +207,11 @@ int read_conf()
     char line[128];
     while(fgets(line, sizeof(line), f))
     {
-        line[strcspn(line, "\r\n")] = 0; // remove newline
-        // Here you can add code to use the read line, e.g., store it or print it
+        //remove newline
+        line[strcspn(line, "\r\n")] = 0;
         printf("Read line: %s\n", line);
 
-        char *addr = strdup(line); // macht eine Kopie
+        char *addr = strdup(line);
         if (!addr) {
             perror("strdup");
             break;
