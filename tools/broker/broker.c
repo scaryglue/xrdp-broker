@@ -25,6 +25,8 @@ typedef struct {
 
 static server_status servers[MAX_SERVERS];
 static int server_count = 0;
+static char **conf_addresses = NULL;
+static int conf_server = 0;
 
 typedef struct {
     char user[64];
@@ -145,6 +147,24 @@ const char *choose_server(const char *user)
 {
     time_t now = time(NULL);
 
+
+    int best = -1;
+    for(int i = 0; i < server_count; i++)
+    {
+        printf("server %d: %f cpu\n", i, servers[i].cpu);
+        if(difftime(now, servers[i].last_seen) < TIMEOUT)
+        {
+            if(best == -1 || servers[i].cpu < servers[best].cpu)
+            {
+                best = i;
+            }
+        }
+    }
+    if(best != -1)
+    {
+        return servers[best].server;
+    }
+    
     // existing session
     for(int i=0; i < server_count; i++)
     {
@@ -158,7 +178,7 @@ const char *choose_server(const char *user)
     }
 
     //take host with fewest sessions, temp
-    int best = -1;
+    
     for(int i = 0; i < server_count; i++)
     {
         if(difftime(now, servers[i].last_seen) < TIMEOUT)
@@ -176,6 +196,41 @@ const char *choose_server(const char *user)
     }
     return NULL;
 }
+int read_conf()
+{
+    FILE *f = fopen("broker.conf", "r");
+    if(!f)
+    {
+        fprintf(stderr, "Could not open broker.conf\n");
+        return -1;
+    }
+    char line[128];
+    while(fgets(line, sizeof(line), f))
+    {
+        line[strcspn(line, "\r\n")] = 0; // remove newline
+        // Here you can add code to use the read line, e.g., store it or print it
+        printf("Read line: %s\n", line);
+
+        char *addr = strdup(line); // macht eine Kopie
+        if (!addr) {
+            perror("strdup");
+            break;
+        }
+
+        char **tmp = realloc(conf_addresses, (conf_server + 1) * sizeof(*conf_addresses));
+        if (!tmp) {
+            perror("realloc");
+            free(addr);
+            break;
+        }
+        conf_addresses = tmp;
+        conf_addresses[conf_server++] = addr;
+
+    }
+
+    fclose(f);
+    return 0;
+}
 
 int main()
 {
@@ -191,27 +246,11 @@ int main()
     }
     nng_socket_set(sub, NNG_OPT_SUB_SUBSCRIBE, "", 0);
 
-    int attempts = 0;
-    while(attempts < 10)
+    read_conf();
+
+    for(int i = 0; i < conf_server; i++)
     {
-        rv = nng_dial(sub, "tcp://itovm88.cit.tum.de:6001", NULL, 0);
-        if(rv != 0)
-        {
-            fprintf(stderr, "sub dial, %s\n", nng_strerror(rv));
-            nng_msleep(200);
-            attempts++;
-        }
-        else
-        {
-            printf("successfully connected\n");
-            break;
-        }
-    }
-    if(rv != 0) {
-        fprintf(stderr, "Could not connect after multiple attempts\n");
-        return 1;
-    }
-    rv = nng_dial(sub, "tcp://itovm89.cit.tum.de:6001", NULL, 0);
+        rv = nng_dial(sub, conf_addresses[i], NULL, 0);
         if(rv != 0)
         {
             fprintf(stderr, "sub dial, %s\n", nng_strerror(rv));
@@ -219,9 +258,9 @@ int main()
         }
         else
         {
-            printf("successfully connected\n");
+            printf("successfully connected to %s\n", conf_addresses[i]);
         }
-    
+    }
 
     //req rep for xrdp
     rv = nng_rep0_open(&rep);
