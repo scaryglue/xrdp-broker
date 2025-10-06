@@ -16,7 +16,7 @@
 struct xrdp_rdp;
 struct stream;
 
-int communicate_with_broker(const char* username, char *target);
+int communicate_with_broker(const char* username, const char* broker_addr, char *target);
 
 void hex_dump(const uint8_t* data, size_t len);
 

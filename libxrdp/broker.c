@@ -199,7 +199,7 @@ xrdp_rdp_send_redir(struct xrdp_rdp *self, struct stream *s, int pdu_type)
     return 0;
 }
 
-int communicate_with_broker(const char* username, char *target)
+int communicate_with_broker(const char* username, const char* broker_addr, char *target)
 {
     nng_socket req;
     int rv;
@@ -210,7 +210,7 @@ int communicate_with_broker(const char* username, char *target)
         return 1;
     }
 
-    if ((rv = nng_dial(req, "tcp://itovm81.cit.tum.de:6002", NULL, 0)) != 0)
+    if ((rv = nng_dial(req, broker_addr, NULL, 0)) != 0)
     {
         LOG(LOG_LEVEL_ERROR, "nng_dial, %s\n", nng_strerror(rv));
         return 1;
@@ -277,7 +277,7 @@ int broker_redirect(struct xrdp_rdp *self)
     g_writeln("%s", self->client_info.username);
     char* target = g_malloc(128, 0);
 
-    if (communicate_with_broker(self->client_info.username, target) == 2)
+    if (communicate_with_broker(self->client_info.username, self->client_info.broker_address, target) == 2)
     {
         g_free(target);
         LOG(LOG_LEVEL_INFO, "User was already redirected");

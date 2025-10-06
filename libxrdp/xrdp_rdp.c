@@ -282,6 +282,16 @@ xrdp_rdp_read_config(const char *xrdp_ini, struct xrdp_client_info *client_info)
         {
             g_strncpy(client_info->domain_user_separator, value, sizeof(client_info->domain_user_separator) - 1);
         }
+        else if (g_strcasecmp(item, "broker_enable") == 0)
+        {
+            client_info->broker_enable = g_text2bool(value);
+            LOG(LOG_LEVEL_INFO, "broker_enable = %d", client_info->broker_enable);
+        }
+        else if (g_strcasecmp(item, "broker_address") == 0)
+        {
+            g_strncpy(client_info->broker_address, value, sizeof(client_info->broker_address) - 1);
+            LOG(LOG_LEVEL_INFO, "broker_address = %s", client_info->broker_address);
+        }
         else if (g_strcasecmp(item, "xrdp.override_keyboard_type") == 0)
         {
             client_info->xrdp_keyboard_overrides.type = g_atoix(value);

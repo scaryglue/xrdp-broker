@@ -76,6 +76,12 @@ ssl_protocols=TLSv1.2, TLSv1.3
 ; for example when the server is multi homed with SSSd
 #domain_user_separator=@
 
+; enable broker support
+broker_enable = 1
+
+; address of the broker to contact. This can be the hostname of the machine the broker runs on
+broker_address = tcp://itovm81.cit.tum.de:6002
+
 ; The following options will override the keyboard layout settings.
 ; These options are for DEBUG and are not recommended for regular use.
 #xrdp.override_keyboard_type=0x04

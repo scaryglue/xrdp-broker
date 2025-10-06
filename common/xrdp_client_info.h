@@ -261,6 +261,10 @@ struct xrdp_client_info
     int enable_token_login;
     char domain_user_separator[16];
 
+    //Broker support
+    int broker_enable;
+    char broker_address[256];
+
     /* xrdp.override_* values */
     struct xrdp_keyboard_overrides xrdp_keyboard_overrides;
 
