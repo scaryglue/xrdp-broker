@@ -64,4 +64,4 @@ xrdp_configure_options.h
 xrdpapi/xrdp-xrdpapi-simple
 .vscode/*
 xrdp_accel_assist/xrdp-accel-assist
-!./tools/broker/Makefile
+!tools/broker/Makefile
