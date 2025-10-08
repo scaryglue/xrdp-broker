@@ -18,6 +18,7 @@ typedef struct {
     char **users;
     int user_count;
     time_t last_seen;
+    float performance;
 } server_status;
 
 #define MAX_SERVERS 32
@@ -151,10 +152,11 @@ const char *choose_server(const char *user)
     int best = -1;
     for(int i = 0; i < server_count; i++)
     {
-        printf("server %d: %f cpu\n", i, servers[i].cpu);
+        servers[i]. performance = servers[i].cpu + servers[i].mem + servers[i].sessions;
+        printf("server %s: Performance value: %f\n", servers[i].server, servers[i].performance);
         if(difftime(now, servers[i].last_seen) < TIMEOUT)
         {
-            if(best == -1 || servers[i].cpu < servers[best].cpu)
+            if(best == -1 || servers[i].performance < servers[best].performance)
             {
                 best = i;
             }
